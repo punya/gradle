@@ -22,7 +22,7 @@ configurations.all {
 tasks.remove(jar)
 
 tasks.withType(AbstractArchiveTask) {
-    baseName "gradle"
+    baseName "gradle-script-kotlin"
 
     // The CI server looks for the distributions at this location
     destinationDir = rootProject.distsDir
