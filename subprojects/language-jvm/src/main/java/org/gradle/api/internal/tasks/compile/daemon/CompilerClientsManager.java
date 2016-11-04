@@ -18,6 +18,7 @@ package org.gradle.api.internal.tasks.compile.daemon;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.internal.concurrent.CompositeStoppable;
+import org.gradle.process.internal.daemon.health.memory.MemoryInfo;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ public class CompilerClientsManager {
     private final Object lock = new Object();
     private final List<CompilerDaemonClient> allClients = new ArrayList<CompilerDaemonClient>();
     private final List<CompilerDaemonClient> idleClients = new ArrayList<CompilerDaemonClient>();
+    private final CompilerDaemonSimpleMemoryExpiration memoryExpiration = new CompilerDaemonSimpleMemoryExpiration(new MemoryInfo(), 0.05);
 
     private CompilerDaemonStarter compilerDaemonStarter;
 
@@ -45,9 +47,9 @@ public class CompilerClientsManager {
     CompilerDaemonClient reserveIdleClient(DaemonForkOptions forkOptions, List<CompilerDaemonClient> clients) {
         synchronized (lock) {
             Iterator<CompilerDaemonClient> it = clients.iterator();
-            while(it.hasNext()) {
+            while (it.hasNext()) {
                 CompilerDaemonClient candidate = it.next();
-                if(candidate.isCompatibleWith(forkOptions)) {
+                if (candidate.isCompatibleWith(forkOptions)) {
                     it.remove();
                     return candidate;
                 }
@@ -57,6 +59,9 @@ public class CompilerClientsManager {
     }
 
     public CompilerDaemonClient reserveNewClient(File workingDir, DaemonForkOptions forkOptions) {
+        synchronized (lock) {
+            memoryExpiration.eventuallyExpireDaemons(forkOptions, idleClients, allClients);
+        }
         //allow the daemon to be started concurrently
         CompilerDaemonClient client = compilerDaemonStarter.startDaemon(workingDir, forkOptions);
         synchronized (lock) {
