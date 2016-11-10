@@ -18,6 +18,7 @@ package org.gradle.api.internal.tasks.compile.daemon;
 import org.gradle.StartParameter;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
+import org.gradle.internal.operations.BuildOperationWorkerRegistry;
 import org.gradle.internal.time.Timer;
 import org.gradle.internal.time.Timers;
 import org.gradle.process.internal.JavaExecHandleBuilder;
@@ -28,10 +29,12 @@ import java.io.File;
 
 public class CompilerDaemonStarter {
     private final static Logger LOG = Logging.getLogger(CompilerDaemonStarter.class);
+    private final BuildOperationWorkerRegistry buildOperationWorkerRegistry;
     private final WorkerProcessFactory workerFactory;
     private final StartParameter startParameter;
 
-    public CompilerDaemonStarter(WorkerProcessFactory workerFactory, StartParameter startParameter) {
+    public CompilerDaemonStarter(BuildOperationWorkerRegistry buildOperationWorkerRegistry, WorkerProcessFactory workerFactory, StartParameter startParameter) {
+        this.buildOperationWorkerRegistry = buildOperationWorkerRegistry;
         this.workerFactory = workerFactory;
         this.startParameter = startParameter;
     }
@@ -52,7 +55,7 @@ public class CompilerDaemonStarter {
         CompilerDaemonWorker worker = builder.build();
         worker.start();
 
-        CompilerDaemonClient client = new CompilerDaemonClient(forkOptions, worker);
+        CompilerDaemonClient client = new CompilerDaemonClient(buildOperationWorkerRegistry, forkOptions, worker);
 
         LOG.info("Started Gradle compiler daemon ({}) with fork options {}.", clock.getElapsed(), forkOptions);
 
