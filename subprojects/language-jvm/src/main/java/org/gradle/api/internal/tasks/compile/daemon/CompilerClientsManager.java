@@ -46,6 +46,7 @@ public class CompilerClientsManager {
 
     CompilerDaemonClient reserveIdleClient(DaemonForkOptions forkOptions, List<CompilerDaemonClient> clients) {
         synchronized (lock) {
+            memoryExpiration.eventuallyExpireDaemons(forkOptions, clients, allClients);
             Iterator<CompilerDaemonClient> it = clients.iterator();
             while (it.hasNext()) {
                 CompilerDaemonClient candidate = it.next();
@@ -59,9 +60,6 @@ public class CompilerClientsManager {
     }
 
     public CompilerDaemonClient reserveNewClient(File workingDir, DaemonForkOptions forkOptions) {
-        synchronized (lock) {
-            memoryExpiration.eventuallyExpireDaemons(forkOptions, idleClients, allClients);
-        }
         //allow the daemon to be started concurrently
         CompilerDaemonClient client = compilerDaemonStarter.startDaemon(workingDir, forkOptions);
         synchronized (lock) {
