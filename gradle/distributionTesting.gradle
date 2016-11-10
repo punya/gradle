@@ -199,9 +199,9 @@ project(":") {
             }
 
             // Expire intTestImage cache snapshots that are older than the tested version
-            // Also expire version-specific cache snapshots when they can't be re-used (for 'snapshot-1' developer builds)
+            // Also expire version-specific cache snapshots when they can't be re-used (for 'SNAPSHOT' developer builds)
             def expireIntegTestCache = { candidateVersion ->
-                return (candidateVersion.snapshot && candidateVersion < GradleVersion.version(testedVersion)) || candidateVersion.version.endsWith('-snapshot-1')
+                return (candidateVersion.snapshot && candidateVersion < GradleVersion.version(testedVersion)) || candidateVersion.version.endsWith('-snapshot-1') || candidateVersion.version.endsWith('-SNAPSHOT')
             }
 
             // Remove state for old versions of Gradle that we're unlikely to ever require again
