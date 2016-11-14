@@ -163,6 +163,193 @@ class ArtifactTransformIntegrationTest extends AbstractIntegrationSpec {
         file("app/build/libs").listFiles().size() == 1
     }
 
+    def "User gets a reasonable error message when a transformation throws exception"() {
+        given:
+        executer.withStackTraceChecksDisabled()
+        buildFile << """
+            import org.gradle.api.artifacts.transform.*
+
+            apply plugin: 'java'
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                compile 'com.google.guava:guava:19.0'
+            }
+
+            configurations {
+                hash {
+                    extendsFrom(configurations.compile)
+                    format = 'md5'
+                    resolutionStrategy.registerTransform(TransformWithIllegalArgumentException) { }
+                }
+            }
+
+            task resolve(type: Copy) {
+                from configurations.hash.incoming.artifacts*.file
+                into "\${buildDir}/libs"
+            }
+
+            @TransformInput(format = 'jar')
+            class TransformWithIllegalArgumentException extends ArtifactTransform {
+
+                @TransformOutput(format = 'md5')
+                File getOutput() {
+                    return null
+                }
+
+                void transform(File input) {
+                    throw new IllegalArgumentException("Transform Implementation Missing!")
+                }
+            }
+        """
+
+        when:
+        succeeds "resolve"
+
+        then:
+        errorOutput.contains("Error while transforming 'guava-19.0.jar' to format 'md5' using 'TransformWithIllegalArgumentException' - Transform Implementation Missing!")
+        errorOutput.contains("IllegalArgumentException")
+    }
+
+    def "User gets a reasonable error message when a output property throws exception"() {
+        given:
+        executer.withStackTraceChecksDisabled()
+        buildFile << """
+            import org.gradle.api.artifacts.transform.*
+
+            apply plugin: 'java'
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                compile 'com.google.guava:guava:19.0'
+            }
+
+            configurations {
+                hash {
+                    extendsFrom(configurations.compile)
+                    format = 'md5'
+                    resolutionStrategy.registerTransform(TransformWithIllegalArgumentException) { }
+                }
+            }
+
+            task resolve(type: Copy) {
+                from configurations.hash.incoming.artifacts*.file
+                into "\${buildDir}/libs"
+            }
+
+            @TransformInput(format = 'jar')
+            class TransformWithIllegalArgumentException extends ArtifactTransform {
+
+                @TransformOutput(format = 'md5')
+                File getOutput() {
+                    throw new IllegalArgumentException("getOutput() Implementation Missing!")
+                }
+
+                void transform(File input) { }
+            }
+        """
+
+        when:
+        succeeds "resolve"
+
+        then:
+        errorOutput.contains("Error while transforming 'guava-19.0.jar' to format 'md5' using 'TransformWithIllegalArgumentException' - getOutput() Implementation Missing!")
+        errorOutput.contains("IllegalArgumentException")
+    }
+
+    def "User gets a reasonable error message when a output property returns null"() {
+        given:
+        buildFile << """
+            import org.gradle.api.artifacts.transform.*
+
+            apply plugin: 'java'
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                compile 'com.google.guava:guava:19.0'
+            }
+
+            configurations {
+                hash {
+                    extendsFrom(configurations.compile)
+                    format = 'md5'
+                    resolutionStrategy.registerTransform(ToNullTransform) { }
+                }
+            }
+
+            task resolve(type: Copy) {
+                from configurations.hash.incoming.artifacts*.file
+                into "\${buildDir}/libs"
+            }
+
+            @TransformInput(format = 'jar')
+            class ToNullTransform extends ArtifactTransform {
+
+                @TransformOutput(format = 'md5')
+                File getOutput() {
+                    return null
+                }
+
+                void transform(File input) { }
+            }
+        """
+
+        when:
+        succeeds "resolve"
+
+        then:
+        errorOutput.contains("Error while transforming 'guava-19.0.jar' to format 'md5' using 'ToNullTransform' - no output file created")
+
+    }
+
+    def "User gets a reasonable error message when a output property returns a non-existing file"() {
+        given:
+        buildFile << """
+            import org.gradle.api.artifacts.transform.*
+
+            apply plugin: 'java'
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                compile 'com.google.guava:guava:19.0'
+            }
+
+            configurations {
+                hash {
+                    extendsFrom(configurations.compile)
+                    format = 'md5'
+                    resolutionStrategy.registerTransform(ToNullTransform) { }
+                }
+            }
+
+            task resolve(type: Copy) {
+                from configurations.hash.incoming.artifacts*.file
+                into "\${buildDir}/libs"
+            }
+
+            @TransformInput(format = 'jar')
+            class ToNullTransform extends ArtifactTransform {
+
+                @TransformOutput(format = 'md5')
+                File getOutput() {
+                    return new File('this/file/does/not/exist')
+                }
+
+                void transform(File input) { }
+            }
+        """
+
+        when:
+        succeeds "resolve"
+
+        then:
+        errorOutput.contains("Error while transforming 'guava-19.0.jar' to format 'md5' using 'ToNullTransform' - expected output file 'this/file/does/not/exist' was not created")
+    }
+
     def fileHashConfigurationAndTransform() {
         """
         buildscript {

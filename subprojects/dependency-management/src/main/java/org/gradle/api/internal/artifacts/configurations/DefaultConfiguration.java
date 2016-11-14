@@ -964,10 +964,11 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
                     if (transform != null) {
                         // TODO: Parallel evaluation and caching
                         File transformedFile = transform.transform(artifact.getFile());
-
-                        ResolvedArtifactResult transformedArtifact = new DefaultResolvedArtifactResult(
-                            artifact.getId(), artifact.getType(), format, transformedFile);
-                        filteredArtifacts.add(transformedArtifact);
+                        if (transformedFile != null) {
+                            ResolvedArtifactResult transformedArtifact = new DefaultResolvedArtifactResult(
+                                artifact.getId(), artifact.getType(), format, transformedFile);
+                            filteredArtifacts.add(transformedArtifact);
+                        }
                     }
                 }
             }
