@@ -24,7 +24,7 @@ class SampleLayoutHandler {
         this.srcDir = srcDir
     }
 
-    void handle(String locationText, Element parentElement, Element sampleManifestElement) {
+    void handle(String locationText, Element parentElement) {
         def doc = parentElement.ownerDocument
         Element outputTitle = doc.createElement("para")
         outputTitle.appendChild(doc.createTextNode("Build layout"))
@@ -38,9 +38,6 @@ class SampleLayoutHandler {
             def fileName = line.trim().replace('\\', '/').replaceAll(/^\//, '').replaceAll(/\/+/, '/')
             if (fileName) {
                 def node = new TreeNode(fileName, fileName, true)
-                def nodeElement = sampleManifestElement.ownerDocument.createElement(node.file ? 'file' : 'dir')
-                nodeElement.setAttribute('path', fileName)
-                sampleManifestElement.appendChild(nodeElement)
                 tree.children << node
             }
         }
@@ -49,6 +46,18 @@ class SampleLayoutHandler {
         tree.writeTo(content)
 
         programListingElement.appendChild(doc.createTextNode(content.toString()))
+    }
+
+    void handleSample(String locationText, Element sampleManifestElement) {
+        locationText.eachLine { line ->
+            def fileName = line.trim().replace('\\', '/').replaceAll(/^\//, '').replaceAll(/\/+/, '/')
+            if (fileName) {
+                def node = new TreeNode(fileName, fileName, true)
+                def nodeElement = sampleManifestElement.ownerDocument.createElement(node.file ? 'file' : 'dir')
+                nodeElement.setAttribute('path', fileName)
+                sampleManifestElement.appendChild(nodeElement)
+            }
+        }
     }
 
 
